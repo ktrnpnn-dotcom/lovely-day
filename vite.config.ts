@@ -112,6 +112,7 @@ function radioProxy(): Plugin {
 }
 
 export default defineConfig({
+  base: process.env.BASE_PATH || "/",
   plugins: [react(), tailwindcss(), radioProxy()],
   resolve: {
     alias: {
