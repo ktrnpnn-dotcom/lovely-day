@@ -5,17 +5,17 @@ export type DayPart = (typeof DAY_PARTS)[number];
 export type Season = (typeof SEASONS)[number];
 
 export const DAY_LABELS: Record<DayPart, string> = {
-  morning: "Утро",
-  day: "День",
-  evening: "Вечер",
-  night: "Ночь",
+  morning: "Morning",
+  day: "Day",
+  evening: "Evening",
+  night: "Night",
 };
 
 export const SEASON_LABELS: Record<Season, string> = {
-  spring: "Весна",
-  summer: "Лето",
-  autumn: "Осень",
-  winter: "Зима",
+  spring: "Spring",
+  summer: "Summer",
+  autumn: "Autumn",
+  winter: "Winter",
 };
 
 export function detectDayPart(date = new Date()): DayPart {
@@ -32,6 +32,18 @@ export function detectSeason(date = new Date()): Season {
   if (month >= 5 && month <= 7) return "summer";
   if (month >= 8 && month <= 10) return "autumn";
   return "winter";
+}
+
+export const THEME_PRESETS = DAY_PARTS.flatMap((dayPart) =>
+  SEASONS.map((season) => ({
+    dayPart,
+    season,
+    label: `${DAY_LABELS[dayPart]} · ${SEASON_LABELS[season]}`,
+  })),
+);
+
+export function themeIndex(dayPart: DayPart, season: Season) {
+  return DAY_PARTS.indexOf(dayPart) * SEASONS.length + SEASONS.indexOf(season);
 }
 
 export const THEME_STORAGE_KEY = "lovely-day-theme";

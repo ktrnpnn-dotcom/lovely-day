@@ -158,7 +158,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const name = err instanceof DOMException ? err.name : "";
       if (name === "AbortError") return false;
       setPlaying(false);
-      setError("Не удалось начать воспроизведение. Нажмите play ещё раз.");
+      setError("Could not start playback. Press play again.");
       return false;
     }
   }, []);
@@ -395,7 +395,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const onError = useCallback(() => {
     setLoading(false);
     setPlaying(false);
-    setError("Не удалось загрузить трек. Попробуйте другой.");
+    setError("Could not load this track. Try another one.");
   }, []);
 
   const onCanPlay = useCallback(() => {

@@ -27,17 +27,27 @@ function makeRingTexture() {
   return texture;
 }
 
-function CameraRig({ far }: { far: boolean }) {
+function CameraRig({ far, close }: { far: boolean; close: boolean }) {
   const { camera } = useThree();
   useLayoutEffect(() => {
-    camera.position.set(0, 0.06, far ? 5.15 : 3.55);
+    camera.position.set(0, 0.08, far ? 5.15 : close ? 3.35 : 4.6);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
-  }, [camera, far]);
+  }, [camera, far, close]);
   return null;
 }
 
-function PlanetMesh({ planet, spinning }: { planet: PlanetId; spinning: boolean }) {
+function PlanetMesh({
+  planet,
+  spinning,
+  interactive,
+  compact,
+}: {
+  planet: PlanetId;
+  spinning: boolean;
+  interactive: boolean;
+  compact: boolean;
+}) {
   const def = PLANETS[planet];
   const group = useRef<Group>(null);
   const cloudsRef = useRef<Mesh>(null);
@@ -45,16 +55,17 @@ function PlanetMesh({ planet, spinning }: { planet: PlanetId; spinning: boolean 
   const last = useRef({ x: 0, y: 0 });
   const velocity = useRef({ x: 0, y: 0 });
   const urls = useMemo(
-    () => [def.map, def.normal, def.clouds].filter(Boolean) as string[],
-    [def.map, def.normal, def.clouds],
+    () => (compact ? [def.map] : ([def.map, def.normal, def.clouds].filter(Boolean) as string[])),
+    [compact, def.map, def.normal, def.clouds],
   );
   const loaded = useLoader(TextureLoader, urls);
   const list = (Array.isArray(loaded) ? loaded : [loaded]) as import("three").Texture[];
   const map = list[0];
   let cursor = 1;
-  const normal = def.normal ? list[cursor++] : null;
-  const clouds = def.clouds ? list[cursor++] : null;
-  const rings = useMemo(() => (def.rings ? makeRingTexture() : null), [def.rings]);
+  const normal = !compact && def.normal ? list[cursor++] : null;
+  const clouds = !compact && def.clouds ? list[cursor++] : null;
+  const segs = compact ? 32 : 64;
+  const rings = useMemo(() => (def.rings && !compact ? makeRingTexture() : null), [def.rings, compact]);
 
   map.colorSpace = SRGBColorSpace;
   map.anisotropy = 8;
@@ -72,8 +83,8 @@ function PlanetMesh({ planet, spinning }: { planet: PlanetId; spinning: boolean 
     node.rotation.x += velocity.current.y;
     velocity.current.x *= 0.94;
     velocity.current.y *= 0.94;
-    if (spinning) node.rotation.y += delta * 0.18;
-    else node.rotation.y += delta * 0.045;
+    if (spinning) node.rotation.y += delta * (compact ? 0.22 : 0.18);
+    else node.rotation.y += delta * (compact ? 0.07 : 0.045);
     node.rotation.x = Math.max(-1.05, Math.min(1.05, node.rotation.x));
     if (cloudsRef.current) cloudsRef.current.rotation.y += delta * 0.05;
   });
@@ -101,14 +112,14 @@ function PlanetMesh({ planet, spinning }: { planet: PlanetId; spinning: boolean 
   return (
       <group
       ref={group}
-      scale={0.92}
-      onPointerDown={onDown}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-      onPointerMove={onMove}
+      scale={compact ? 1 : 0.92}
+      onPointerDown={interactive ? onDown : undefined}
+      onPointerUp={interactive ? onUp : undefined}
+      onPointerCancel={interactive ? onUp : undefined}
+      onPointerMove={interactive ? onMove : undefined}
     >
       <mesh>
-        <sphereGeometry args={[1, 64, 64]} />
+        <sphereGeometry args={[1, segs, segs]} />
         <meshStandardMaterial
           map={map}
           normalMap={normal ?? undefined}
@@ -139,25 +150,39 @@ function PlanetMesh({ planet, spinning }: { planet: PlanetId; spinning: boolean 
 export function PlanetGlobe({
   planet,
   spinning,
+  interactive = true,
+  compact = false,
 }: {
   planet: PlanetId;
   spinning: boolean;
+  interactive?: boolean;
+  compact?: boolean;
 }) {
+  const far = planet === "saturn" && !compact;
   return (
-    <div className="planet-canvas">
+    <div className="planet-canvas" style={compact ? { pointerEvents: "none" } : undefined}>
       <Canvas
         key={planet}
-        camera={{ position: [0, 0.06, planet === "saturn" ? 5.15 : 3.55], fov: 28 }}
-        gl={{ alpha: true, antialias: true }}
-        dpr={[1, 1.75]}
-        style={{ touchAction: "none", width: "100%", height: "100%" }}
+        camera={{ position: [0, 0.08, far ? 5.15 : compact ? 3.35 : 4.6], fov: 28 }}
+        gl={{ alpha: true, antialias: !compact, premultipliedAlpha: false, powerPreference: compact ? "low-power" : "default" }}
+        onCreated={({ gl }) => {
+          gl.setClearColor(0x000000, 0);
+        }}
+        dpr={compact ? 1 : [1, 1.75]}
+        style={{ touchAction: interactive ? "none" : "auto", width: "100%", height: "100%" }}
       >
-        <CameraRig far={planet === "saturn"} />
+        <CameraRig far={far} close={compact} />
         <ambientLight intensity={0.55} />
         <directionalLight position={[-3.2, 1.4, 4]} intensity={1.7} />
         <directionalLight position={[2.4, -1, -2]} intensity={0.18} />
         <Suspense fallback={null}>
-          <PlanetMesh key={planet} planet={planet} spinning={spinning} />
+          <PlanetMesh
+            key={planet}
+            planet={planet}
+            spinning={spinning}
+            interactive={interactive}
+            compact={compact}
+          />
         </Suspense>
       </Canvas>
     </div>
