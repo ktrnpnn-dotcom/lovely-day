@@ -28,11 +28,11 @@ export function ThemeDials({ compact = false }: { compact?: boolean }) {
   const { dayPart, season, setDayPart, setSeason } = usePlayer();
 
   return (
-    <div className={cn("flex flex-col items-end gap-1.5", compact ? "" : "gap-3")}>
-      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+    <div className={cn("flex flex-col items-end gap-1", compact ? "" : "gap-3")}>
+      <p className="text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
         {DAY_LABELS[dayPart]} · {SEASON_LABELS[season]}
       </p>
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <Segment
           label="Время суток"
           compact={compact}
@@ -76,11 +76,7 @@ function Segment({
   }[];
 }) {
   return (
-    <div
-      role="group"
-      aria-label={label}
-      className="flex items-center rounded-full border border-white/10 bg-black/20 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
-    >
+    <div role="group" aria-label={label} className="flex items-center gap-1">
       {items.map((item) => {
         const Icon = item.icon;
         return (
@@ -93,11 +89,9 @@ function Segment({
             data-testid={`theme-${item.id}`}
             onClick={item.onSelect}
             className={cn(
-              "inline-flex items-center justify-center rounded-full text-[11px] tracking-wide transition",
-              compact ? "size-7" : "size-8 px-2.5",
-              item.active
-                ? "bg-[color-mix(in_oklab,var(--primary)_55%,black)] text-foreground shadow-[0_0_16px_color-mix(in_oklab,var(--glow)_45%,transparent)]"
-                : "text-muted-foreground hover:text-foreground",
+              "inline-flex items-center justify-center rounded-full text-[11px] transition",
+              compact ? "size-8" : "size-9",
+              item.active ? "bg-foreground text-[var(--background)]" : "text-muted-foreground hover:text-foreground",
             )}
           >
             <Icon className="pointer-events-none size-3.5" />

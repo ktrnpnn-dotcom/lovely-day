@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { SONGS, STATIONS, type Playable } from "@/lib/catalog";
+import { RADIO, SONGS, type Playable } from "@/lib/catalog";
 import { TAPE_SEEK_RATE } from "@/lib/format";
 import { tapeMachine } from "@/lib/tape";
 import {
@@ -106,7 +106,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const mutedRef = useRef(false);
   const volumeRef = useRef(0.82);
 
-  const [mode, setModeState] = useState<Mode>("library");
   const [trackId, setTrackId] = useState(SONGS[0].id);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -121,8 +120,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const dayPart = theme.dayPart;
   const season = theme.season;
 
-  const catalog = mode === "library" ? SONGS : STATIONS;
-  const current = catalog.find((item) => item.id === trackId) ?? catalog[0];
+  const catalog = SONGS;
+  const library = [RADIO, ...SONGS];
+  const current = library.find((item) => item.id === trackId) ?? SONGS[0];
+  const mode: Mode = current.live ? "radio" : "library";
 
   const setDayPart = useCallback((part: DayPart) => {
     setTheme((prev) => {
@@ -186,7 +187,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const playTrack = useCallback((id: string) => {
-    const item = [...SONGS, ...STATIONS].find((track) => track.id === id);
+    const item = [RADIO, ...SONGS].find((track) => track.id === id);
     setError(null);
     setTrackId(id);
     setCurrentTime(0);
@@ -195,11 +196,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setMode = useCallback((next: Mode) => {
-    const list = next === "library" ? SONGS : STATIONS;
-    setModeState(next);
-    setTrackId(list[0].id);
+    const item = next === "radio" ? RADIO : SONGS[0];
+    setTrackId(item.id);
     setCurrentTime(0);
-    setDuration(list[0].duration);
+    setDuration(item.duration);
     setPlaying(true);
     setError(null);
   }, []);
@@ -217,15 +217,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const skipBy = useCallback(
     (delta: number) => {
-      const list = mode === "library" ? SONGS : STATIONS;
-      const index = list.findIndex((item) => item.id === current.id);
-      const nextItem = list[(index + delta + list.length) % list.length];
+      if (current.live) {
+        const item = delta > 0 ? SONGS[0] : SONGS[SONGS.length - 1];
+        setTrackId(item.id);
+        setCurrentTime(0);
+        setDuration(item.duration);
+        setPlaying(true);
+        return;
+      }
+      const index = SONGS.findIndex((item) => item.id === current.id);
+      const nextItem = SONGS[(index + delta + SONGS.length) % SONGS.length];
       setTrackId(nextItem.id);
       setCurrentTime(0);
       setDuration(nextItem.duration);
       setPlaying(true);
     },
-    [current.id, mode],
+    [current.id, current.live],
   );
 
   const next = useCallback(() => skipBy(1), [skipBy]);
@@ -373,18 +380,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const onEnded = useCallback(() => {
-    if (current.live || mode === "radio") {
+    if (current.live) {
       void playMedia();
       return;
     }
-    const list = SONGS;
-    const index = list.findIndex((item) => item.id === current.id);
-    const nextItem = list[(index + 1) % list.length];
+    const index = SONGS.findIndex((item) => item.id === current.id);
+    const nextItem = SONGS[(index + 1) % SONGS.length];
     setTrackId(nextItem.id);
     setCurrentTime(0);
     setDuration(nextItem.duration);
     setPlaying(true);
-  }, [current.id, current.live, mode, playMedia]);
+  }, [current.id, current.live, playMedia]);
 
   const onError = useCallback(() => {
     setLoading(false);
@@ -487,6 +493,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       <audio
         ref={audioRef}
         src={current.src}
+        crossOrigin="anonymous"
         preload={current.live ? "none" : "auto"}
         playsInline
         loop={false}
